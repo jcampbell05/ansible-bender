@@ -88,7 +88,8 @@ def docker_run_cmd_in_container(
     # was the temporary container created? if so, remove it
     created = False
     try:
-        run_cmd(["docker", "pull", container_image], log_stderr=log_stderr, log_output=log_output)
+        create_docker_container(
+            container_image, container_name, build_volumes=None, extra_from_args=extra_from_args, debug=False)
         created = True
         run_cmd(["docker", "run", "--name", container_name, container_image] + cmd, log_stderr=log_stderr, log_output=log_output)
     except subprocess.CalledProcessError:
@@ -97,6 +98,26 @@ def docker_run_cmd_in_container(
     finally:
         if created:
             run_cmd(["docker", "rm", container_name], log_stderr=log_stderr)
+
+def create_docker_container(container_image, container_name, build_volumes=None, extra_from_args=None, debug=False):
+    """
+    Create new docker container according to spec.
+
+    :param container_image: name of the image
+    :param container_name: name of the container to work in
+    :param extra_from_args: a list of extra arguments for `docker run`
+    :param build_volumes: list of str, bind-mount specification: ["/host:/cont", ...]
+    :param debug: bool, make docker print debug info
+    """
+    args = []
+    if build_volumes:
+        for volume in build_volumes:
+            args += ["-v", volume]
+    if not extra_from_args is None:
+        args += shlex.split(extra_from_args)
+    args += ["--name", container_name, container_image]
+    # will pull the image by default if it's not present in buildah's storage
+    docker("create", args, debug=debug, log_stderr=True)
 
 def configure_buildah_container(container_name, working_dir=None, env_vars=None,
                                 labels=None, annotations=None,
@@ -192,7 +213,7 @@ class DockerBuilder(Builder):
         """
         create a container where all the work happens
         """
-        create_buildah_container(
+        create_docker_container(
             self.build.get_top_layer_id(), self.ansible_host,
             build_volumes=self.build.build_volumes,
             extra_from_args=self.build.buildah_from_extra_args,
