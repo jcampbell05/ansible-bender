@@ -37,17 +37,14 @@ def get_docker_image_id(container_image):
     return graceful_get(metadata, "FromImageID")
 
 
-def pull_buildah_image(container_image):
-    run_cmd(["buildah", "pull", "--quiet", container_image],
+def pull_docker_image(container_image):
+    run_cmd(["docker", "pull", "--quiet", container_image],
             save_output_in_exc=False,
             log_stderr=False, print_output=True, log_output=False)
 
 
 def does_image_exist(container_image):
-    # cmd = ["podman", "image", "exists", container_image]
-    # https://github.com/containers/libpod/issues/2924
-    # https://github.com/ansible-community/ansible-bender/issues/114
-    cmd = ["buildah", "inspect", "-t", "image", container_image]
+    cmd = ["docker", "inspect", "-t", "image", container_image]
     run_cmd(cmd, print_output=False)
 
 
@@ -310,7 +307,7 @@ class DockerBuilder(Builder):
         pull base image
         """
         logger.info("pulling base image: %s", self.build.base_image)
-        pull_buildah_image(self.build.base_image)
+        pull_docker_image(self.build.base_image)
 
     def push(self, build, target, force=False):
         """
