@@ -9,7 +9,7 @@
     docker_package_name: docker
     ansible_bender:
       target_image:
-        workging_dir: /src
+        working_dir: /src
         cmd: /entry.sh
       working_container:
         volumes:

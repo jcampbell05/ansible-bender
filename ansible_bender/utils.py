@@ -163,6 +163,11 @@ def buildah_command_exists():
         "available at https://github.com/projectatomic/buildah/blob/master/install.md"
     )
 
+def docker_command_exists():
+    return one_of_commands_exists(
+        ["docker"],
+        "docker command doesn't seem to be available on your system. "
+    )
 
 def podman_command_exists():
     return one_of_commands_exists(

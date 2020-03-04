@@ -9,6 +9,9 @@ PYTEST_EXEC := pytest-3
 build-ab-img: contrib/pre-setup.yml
 	$(ANSIBLE_BENDER) build -- ./contrib/pre-setup.yml $(BASE_IMAGE) $(CONT_IMG)
 
+build-ab-img-docker: contrib/pre-setup.yml
+	$(ANSIBLE_BENDER) build --builder docker -- ./contrib/pre-setup.yml $(BASE_IMAGE) $(CONT_IMG)
+
 check:
 	PYTHONPATH=$(CURDIR) PYTHONDONTWRITEBYTECODE=yes $(PYTEST_EXEC) --cov=ansible_bender -l -v $(TEST_TARGET)
 
