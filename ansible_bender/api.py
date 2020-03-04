@@ -74,13 +74,10 @@ class Application:
                 builder.pull()
                 build.pulled = True
 
-            print('BOB')
             builder.check_container_creation()
 
             # let's record base image as a first layer
-            print('BOB')
             base_image_id = builder.get_image_id(build.base_image)
-            print('BOB')
             build.record_layer(None, base_image_id, None, cached=True)
 
             a_runner = AnsibleRunner(build.playbook_path, builder, build, debug=self.debug)

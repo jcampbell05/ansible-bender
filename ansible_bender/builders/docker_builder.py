@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def inspect_resource(resource_type, resource_id):
     try:
-        i = run_cmd(["docker", "inspect", "-t", resource_type, resource_id],
+        i = run_cmd(["docker", "inspect", "--type", resource_type, resource_id],
                     return_output=True, log_output=False)
     except subprocess.CalledProcessError:
         logger.info("no such %s %s", resource_type, resource_id)
@@ -34,7 +34,11 @@ def inspect_resource(resource_type, resource_id):
 
 def get_docker_image_id(container_image):
     metadata = inspect_resource("image", container_image)
-    return graceful_get(metadata, "FromImageID")
+
+    if len(metadata) > 0:
+        return graceful_get(metadata[0], "Id")
+
+    return None
 
 
 def pull_docker_image(container_image):
@@ -44,7 +48,7 @@ def pull_docker_image(container_image):
 
 
 def does_image_exist(container_image):
-    cmd = ["docker", "inspect", "-t", "image", container_image]
+    cmd = ["docker", "inspect", "--type", "image", container_image]
     run_cmd(cmd, print_output=False)
 
 
@@ -332,7 +336,7 @@ class DockerBuilder(Builder):
         for i in self.python_interpr_prio:
             cmd = ["ls", i]
             try:
-                run_cmd(["podman", "run", "--rm", self.build.base_image] + cmd,
+                run_cmd(["docker", "run", "--rm", self.build.base_image] + cmd,
                         log_stderr=False, log_output=True)
             except subprocess.CalledProcessError:
                 logger.info("python interpreter %s does not exist", i)
