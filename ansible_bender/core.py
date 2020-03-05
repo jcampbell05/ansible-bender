@@ -121,12 +121,14 @@ def run_playbook(playbook_path, inventory_path, a_cfg_path, connection, extra_va
     if a_cfg_path:
         env["ANSIBLE_CONFIG"] = a_cfg_path
 
-    if try_unshare and os.getuid() != 0:
-        logger.info("we are running rootless, prepending `buildah unshare`")
-        # rootless, we need to `buildah unshare` for sake of `buildah mount`
-        # https://github.com/containers/buildah/issues/1271
-        # the need for `--` https://github.com/containers/buildah/issues/1374
-        cmd_args = ["buildah", "unshare", "--"] + cmd_args
+    # TODO: Make dockerfiable
+    #
+    # if try_unshare and os.getuid() != 0:
+    #     logger.info("we are running rootless, prepending `buildah unshare`")
+    #     # rootless, we need to `buildah unshare` for sake of `buildah mount`
+    #     # https://github.com/containers/buildah/issues/1271
+    #     # the need for `--` https://github.com/containers/buildah/issues/1374
+    #     cmd_args = ["buildah", "unshare", "--"] + cmd_args
 
     # ansible has no official python API, the API they have is internal and said to break compat
     try:
@@ -200,19 +202,24 @@ class AnsibleRunner:
             logger.info("creating inventory file %s", inv_path)
             with open(inv_path, "w") as fd:
                 self._create_inventory_file(fd, self.build_i.python_interpreter)
+
             a_cfg_path = os.path.join(tmp, "ansible.cfg")
             with open(a_cfg_path, "w") as fd:
                 self._create_ansible_cfg(fd)
 
             tmp_pb_path = os.path.join(tmp, "p.yaml")
+
             with open(self.pb, "r") as fd_r:
                 pb_dict = yaml.safe_load(fd_r)
+
             for idx, doc in enumerate(pb_dict):
                 host = doc["hosts"]
                 logger.debug("play[%s], host = %s", idx, host)
                 doc["hosts"] = self.builder.ansible_host
+
             with open(tmp_pb_path, "w") as fd:
                 yaml.safe_dump(pb_dict, fd)
+
             playbook_base = os.path.basename(self.pb).split(".", 1)[0]
             timestamp = datetime.datetime.now().strftime(TIMESTAMP_FORMAT)
             symlink_name = f".{playbook_base}-{timestamp}-{random_str()}.yaml"
@@ -224,6 +231,7 @@ class AnsibleRunner:
             try:
                 if self.build_i.ansible_extra_args:
                     extra_args = shlex.split(self.build_i.ansible_extra_args)
+
                 return run_playbook(
                     symlink_path, inv_path, a_cfg_path, self.builder.ansible_connection,
                     debug=self.debug, environment=environment, ansible_args=extra_args

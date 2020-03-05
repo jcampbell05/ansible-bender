@@ -122,7 +122,7 @@ def create_docker_container(container_image, container_name, build_volumes=None,
     # will pull the image by default if it's not present in dockers's storage
     docker("run", args, debug=debug, log_stderr=True)
 
-def configure_buildah_container(container_name, working_dir=None, env_vars=None,
+def configure_docker_container(container_name, working_dir=None, env_vars=None,
                                 labels=None, annotations=None,
                                 user=None, cmd=None, entrypoint=None,
                                 ports=None, volumes=None,
@@ -212,7 +212,6 @@ class DockerBuilder(Builder):
         docker_command_exists()
 
     def create(self):
-        print("WORK")
         """
         create a container where all the work happens
         """
@@ -221,17 +220,6 @@ class DockerBuilder(Builder):
             build_volumes=self.build.build_volumes,
             extra_from_args=self.build.buildah_from_extra_args,
             debug=self.debug)
-        # let's apply configuration before execing the playbook, except for user
-        configure_buildah_container(
-            self.ansible_host, working_dir=self.build.metadata.working_dir,
-            user=self.build.build_user,
-            env_vars=self.build.metadata.env_vars,
-            ports=self.build.metadata.ports,
-            labels=self.build.metadata.labels,  # labels are not applied when they are configured
-                                                # before doing commit
-            annotations=self.build.metadata.annotations,
-            debug=self.debug
-        )
 
     def run(self, image_name, command):
         """
@@ -241,6 +229,20 @@ class DockerBuilder(Builder):
         :param command: list of str
         :return: str (output)
         """
+        print("HUY")
+
+        # let's apply configuration before execing the playbook, except for user
+        # configure_docker_container(
+        #     self.ansible_host, working_dir=self.build.metadata.working_dir,
+        #     user=self.build.build_user,
+        #     env_vars=self.build.metadata.env_vars,
+        #     ports=self.build.metadata.ports,
+        #     labels=self.build.metadata.labels,  # labels are not applied when they are configured
+        #                                         # before doing commit
+        #     annotations=self.build.metadata.annotations,
+        #     debug=self.debug
+        # )
+
         cmd = ["podman", "run", "--rm", image_name] + command
         return run_cmd(cmd, return_output=True)
 
@@ -265,16 +267,16 @@ class DockerBuilder(Builder):
         else:
             user = self.build.build_user
 
-        if (self.build.metadata.user or self.build.metadata.cmd or
-            self.build.metadata.entrypoint or self.build.metadata.volumes):
-            # change user if needed
-            configure_buildah_container(
-                self.ansible_host,
-                user=user,
-                cmd=self.build.metadata.cmd,
-                entrypoint=self.build.metadata.entrypoint,
-                volumes=self.build.metadata.volumes,
-            )
+        # if (self.build.metadata.user or self.build.metadata.cmd or
+        #     self.build.metadata.entrypoint or self.build.metadata.volumes):
+        #     # change user if needed
+        #     configure_docker_container(
+        #         self.ansible_host,
+        #         user=user,
+        #         cmd=self.build.metadata.cmd,
+        #         entrypoint=self.build.metadata.entrypoint,
+        #         volumes=self.build.metadata.volumes,
+        #     )
 
         if image_name:
             args = [self.ansible_host, image_name]

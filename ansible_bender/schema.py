@@ -102,7 +102,8 @@ BUILD_SCHEMA = {
             "type": ["string", "null"],
             "title": "Builder to use during a build",
             "examples": [
-                "buildah"
+                "buildah",
+                "docker"
             ]
         },
         "layers": {

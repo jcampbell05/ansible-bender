@@ -110,6 +110,7 @@ def run_cmd(cmd, return_output=False, ignore_status=False, print_output=False, l
                 errout = e.get_output()
             raise subprocess.CalledProcessError(cmd=cmd, returncode=process.returncode,
                                                 stderr=errout, output=out)
+
     if return_all_output:
         return whole_output
     if return_output:
