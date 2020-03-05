@@ -89,9 +89,8 @@ def docker_run_cmd_in_container(
     created = False
     try:
         create_docker_container(
-            container_image, container_name, build_volumes=None, extra_from_args=extra_from_args, debug=False)
+            container_image, container_name, build_volumes=None, extra_from_args=extra_from_args, command=cmd, debug=False)
         created = True
-        run_cmd(["docker", "run", "--name", container_name, container_image] + cmd, log_stderr=log_stderr, log_output=log_output)
     except subprocess.CalledProcessError:
         logger.error(f"Unable to create or run a container using {container_image} with docker")
         raise
@@ -99,7 +98,7 @@ def docker_run_cmd_in_container(
         if created:
             run_cmd(["docker", "rm", container_name], log_stderr=log_stderr)
 
-def create_docker_container(container_image, container_name, build_volumes=None, extra_from_args=None, debug=False):
+def create_docker_container(container_image, container_name, build_volumes=None, extra_from_args=None, command=None, debug=False):
     """
     Create new docker container according to spec.
 
@@ -116,8 +115,12 @@ def create_docker_container(container_image, container_name, build_volumes=None,
     if not extra_from_args is None:
         args += shlex.split(extra_from_args)
     args += ["--name", container_name, container_image]
-    # will pull the image by default if it's not present in buildah's storage
-    docker("create", args, debug=debug, log_stderr=True)
+
+    if not command is None:
+        args += command   
+
+    # will pull the image by default if it's not present in dockers's storage
+    docker("run", args, debug=debug, log_stderr=True)
 
 def configure_buildah_container(container_name, working_dir=None, env_vars=None,
                                 labels=None, annotations=None,
@@ -171,20 +174,19 @@ def configure_buildah_container(container_name, working_dir=None, env_vars=None,
         for v in volumes:
             config_args += ["-v", v]
     if config_args:
-        buildah("config", config_args + [container_name], debug=debug)
+        docker("config", config_args + [container_name], debug=debug)
     return container_name
 
 
 def docker(command, args_and_opts, print_output=False, debug=False, log_stderr=False):
     cmd = ["docker"]
-    # if debug:
-    #     cmd += ["--debug"]
     cmd += [command] + args_and_opts
     logger.debug("running command: %s", command)
     return run_cmd(cmd, print_output=print_output, log_stderr=log_stderr)
 
 
 def buildah_with_output(command, args_and_opts, debug=False):
+    print("BOBX")
     cmd = ["buildah"]
     # if debug:
     #     cmd += ["--debug"]
@@ -210,6 +212,7 @@ class DockerBuilder(Builder):
         docker_command_exists()
 
     def create(self):
+        print("WORK")
         """
         create a container where all the work happens
         """
@@ -277,7 +280,7 @@ class DockerBuilder(Builder):
             args = [self.ansible_host, image_name]
             if final_image and self.build.squash:
                 args.insert(0, "--squash")
-            buildah("commit", args, print_output=print_output, debug=self.debug)
+            docker("commit", args, print_output=print_output, debug=self.debug)
             return self.get_image_id(image_name)
         else:
             fd, name = tempfile.mkstemp()
@@ -293,7 +296,7 @@ class DockerBuilder(Builder):
             if final_image and self.build.squash:
                 args.insert(0, "--squash")
             try:
-                buildah("commit", args, print_output=print_output, debug=self.debug)
+                docker("commit", args, print_output=print_output, debug=self.debug)
                 image_id = Path(name).read_text()
                 logger.debug("layer id = %s", image_id)
                 return image_id
@@ -304,7 +307,7 @@ class DockerBuilder(Builder):
         """
         clean working container
         """
-        buildah("rm", [self.ansible_host], debug=self.debug)
+        docker("rm", [self.ansible_host], debug=self.debug)
 
     def get_image_id(self, image_name):
         """ return image_id for provided image """
@@ -343,6 +346,7 @@ class DockerBuilder(Builder):
         :param force: bool, bypass checks if True
         :return: None
         """
+        print("BOB LAND")
         built_image = build.get_target_image_id()
         cmd = ["buildah", "push", built_image, target]
         # podman prints progress to stderr
@@ -388,6 +392,7 @@ class DockerBuilder(Builder):
             log_stderr=True, extra_from_args=self.build.buildah_from_extra_args)
 
     def get_buildah_version(self):
+        print("BOB1")
         out = run_cmd(["buildah", "version"], log_stderr=True, return_output=True, log_output=False)
         version = re.findall(r"Version:\s*([\d\.]+)", out)[0].split(".")
         logger.debug("buildah version = %s", version)
